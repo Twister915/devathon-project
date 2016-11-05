@@ -4,13 +4,13 @@ import org.bukkit.Bukkit;
 import org.bukkit.event.Event;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
-import org.devathon.contest2016.DevathonPlugin;
+import org.bukkit.plugin.java.JavaPlugin;
 import org.devathon.contest2016.inject.Inject;
 import org.devathon.contest2016.inject.Singleton;
 
 @Singleton
 public final class EventListener {
-    @Inject private DevathonPlugin plugin;
+    @Inject private JavaPlugin plugin;
 
     @SuppressWarnings("unchecked")
     public <T extends Event> void listenEvent(Class<T> eventType, EventPriority priority, boolean ignoreCancelled, ListenerCallback<T> callback) {
