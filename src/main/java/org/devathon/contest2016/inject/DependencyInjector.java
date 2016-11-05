@@ -14,6 +14,10 @@ public final class DependencyInjector {
     }
 
     public <T> T getInstance(Class<T> type) {
+        return getInstance(type, null);
+    }
+
+    private <T> T getInstance(Class<T> type, Object parent) {
         boolean isSingleton = type.isAnnotationPresent(Singleton.class);
         if (isSingleton) {
             Object val = singletons.get(type);
@@ -22,7 +26,7 @@ public final class DependencyInjector {
         }
 
         T inst = doConstruction(type);
-        doFieldInjection(type, inst);
+        doFieldInjection(type, inst, parent);
 
         if (isSingleton)
             singletons.put(type, inst);
@@ -73,11 +77,15 @@ public final class DependencyInjector {
         return inst;
     }
 
-    private void doFieldInjection(Class<?> type, Object inst) {
+    private void doFieldInjection(Class<?> type, Object inst, Object parent) {
         Class<?> concreteType = inst.getClass();
         Iterator<Field> fieldIterator = allFields(concreteType);
         while (fieldIterator.hasNext()) {
             Field next = fieldIterator.next();
+            Object set = null;
+            if (next.isAnnotationPresent(Parent.class))
+                set = parent;
+
             Class<?> declaringClass = next.getDeclaringClass(); //can't cache since we're walking up inheritance tree :(
             if (!declaringClass.isAnnotationPresent(Inject.class) && !next.isAnnotationPresent(Inject.class))
                 continue;
@@ -86,7 +94,9 @@ public final class DependencyInjector {
                 next.setAccessible(true);
 
             try {
-                next.set(inst, getInstance(type));
+                if (set == null)
+                    set = getInstance(type, inst);
+                next.set(inst, set);
             } catch (IllegalAccessException e) {
                 throw new IllegalStateException("Could not inject at field " + next.getName() + " of " + concreteType.getSimpleName(), e);
             }
@@ -133,7 +143,7 @@ public final class DependencyInjector {
 
     public DependencyInjector bind(Class<?> type, Object instance) {
         testType(type, instance.getClass());
-        doFieldInjection(type, instance);
+        doFieldInjection(type, instance, null);
         singletons.put(type, instance);
         return this;
     }
