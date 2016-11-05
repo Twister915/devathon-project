@@ -55,7 +55,7 @@ while true; do
     if [[ $(uname) == MING* ]]; then
         # we're running inside of git bash on windows, which doesn't support everything that unix systems do
         # so just run the jar and ask the user if they want to continue running after it's done
-        java -jar spigot.jar
+        java -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005 -jar spigot.jar
 
         read -n 1 -p "Do you want to recompile and restart the server? (y/n) " value
         if [ "$value" == "n" ]; then
@@ -68,7 +68,7 @@ while true; do
 
         mkfifo /tmp/srv-input
         cat > /tmp/srv-input &
-        tail -f /tmp/srv-input | java -jar spigot.jar &
+        tail -f /tmp/srv-input | java -jar -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005 spigot.jar &
 
         running=true
         while $running; do

@@ -18,7 +18,7 @@ public final class DependencyInjector {
     }
 
     private <T> T getInstance(Class<T> type, Object parent) {
-        boolean isSingleton = type.isAnnotationPresent(Singleton.class);
+        boolean isSingleton = type.isAnnotationPresent(Singleton.class) || singletons.containsKey(type);
         if (isSingleton) {
             Object val = singletons.get(type);
             if (val != null)
@@ -26,7 +26,7 @@ public final class DependencyInjector {
         }
 
         T inst = doConstruction(type);
-        doFieldInjection(type, inst, parent);
+        doFieldInjection(inst, parent);
 
         if (isSingleton)
             singletons.put(type, inst);
@@ -77,17 +77,18 @@ public final class DependencyInjector {
         return inst;
     }
 
-    private void doFieldInjection(Class<?> type, Object inst, Object parent) {
+    private void doFieldInjection(Object inst, Object parent) {
         Class<?> concreteType = inst.getClass();
         Iterator<Field> fieldIterator = allFields(concreteType);
         while (fieldIterator.hasNext()) {
             Field next = fieldIterator.next();
             Object set = null;
-            Class<?> declaringClass = next.getDeclaringClass(); //can't cache since we're walking up inheritance tree :(
+            Class<?> fieldOwner = next.getDeclaringClass(); //can't cache since we're walking up inheritance tree :(
+            Class<?> fieldType = next.getType();
 
-            if (next.isAnnotationPresent(Parent.class) && declaringClass.isAssignableFrom(parent.getClass()))
+            if (next.isAnnotationPresent(Parent.class) && fieldType.isAssignableFrom(parent.getClass()))
                 set = parent;
-            else if (!declaringClass.isAnnotationPresent(Inject.class) && !next.isAnnotationPresent(Inject.class))
+            else if (!fieldOwner.isAnnotationPresent(Inject.class) && !next.isAnnotationPresent(Inject.class))
                 continue;
 
             if (!next.isAccessible())
@@ -95,7 +96,7 @@ public final class DependencyInjector {
 
             try {
                 if (set == null)
-                    set = getInstance(type, inst);
+                    set = getInstance(fieldType, inst);
                 next.set(inst, set);
             } catch (IllegalAccessException e) {
                 throw new IllegalStateException("Could not inject at field " + next.getName() + " of " + concreteType.getSimpleName(), e);
@@ -111,6 +112,9 @@ public final class DependencyInjector {
 
             @Override
             public boolean hasNext() {
+                if (type == null)
+                    return false;
+
                 if (fields == null)
                     fields = type.getDeclaredFields();
 
@@ -118,6 +122,7 @@ public final class DependencyInjector {
                     i = 0;
                     fields = null;
                     type = type.getSuperclass();
+                    return hasNext();
                 }
 
                 return type != Object.class;
@@ -143,8 +148,8 @@ public final class DependencyInjector {
 
     public DependencyInjector bind(Class<?> type, Object instance) {
         testType(type, instance.getClass());
-        doFieldInjection(type, instance, null);
         singletons.put(type, instance);
+        doFieldInjection(instance, null);
         return this;
     }
 

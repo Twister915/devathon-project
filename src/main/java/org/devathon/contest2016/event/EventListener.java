@@ -1,6 +1,7 @@
 package org.devathon.contest2016.event;
 
 import lombok.Synchronized;
+import lombok.ToString;
 import org.bukkit.Bukkit;
 import org.bukkit.event.Event;
 import org.bukkit.event.EventPriority;
@@ -14,9 +15,10 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
 
+@ToString
 public final class EventListener {
     @Inject private JavaPlugin plugin;
-    @Parent @Inject private Object creator;
+    @Parent private Object creator;
 
     private final Set<ListenerSub> listeners = new HashSet<>();
 

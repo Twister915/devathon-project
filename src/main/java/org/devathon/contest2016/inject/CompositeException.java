@@ -1,6 +1,5 @@
 package org.devathon.contest2016.inject;
 
-import java.io.PrintWriter;
 import java.util.Collection;
 
 public final class CompositeException extends RuntimeException {
@@ -8,15 +7,16 @@ public final class CompositeException extends RuntimeException {
 
     public CompositeException(Collection<? extends Throwable> throwables) {
         this.throwables = throwables;
+//        printStackTrace();
     }
 
     @Override
-    public void printStackTrace(PrintWriter s) {
-        s.println("Multiple errors, printing all.");
+    public void printStackTrace() {
+        System.err.println("Multiple errors, printing all.");
 
         int index = 0;
         for (Throwable throwable : throwables) {
-            s.println("Error " + (index++));
+            System.err.println("Error " + (index++));
             throwable.printStackTrace();
         }
     }
