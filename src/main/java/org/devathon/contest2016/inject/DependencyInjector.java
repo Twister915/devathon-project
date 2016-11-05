@@ -83,11 +83,11 @@ public final class DependencyInjector {
         while (fieldIterator.hasNext()) {
             Field next = fieldIterator.next();
             Object set = null;
-            if (next.isAnnotationPresent(Parent.class))
-                set = parent;
-
             Class<?> declaringClass = next.getDeclaringClass(); //can't cache since we're walking up inheritance tree :(
-            if (!declaringClass.isAnnotationPresent(Inject.class) && !next.isAnnotationPresent(Inject.class))
+
+            if (next.isAnnotationPresent(Parent.class) && declaringClass.isAssignableFrom(parent.getClass()))
+                set = parent;
+            else if (!declaringClass.isAnnotationPresent(Inject.class) && !next.isAnnotationPresent(Inject.class))
                 continue;
 
             if (!next.isAccessible())

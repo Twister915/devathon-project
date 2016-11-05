@@ -1,5 +1,6 @@
 package org.devathon.contest2016.event;
 
+import lombok.Synchronized;
 import org.bukkit.Bukkit;
 import org.bukkit.event.Event;
 import org.bukkit.event.EventPriority;
@@ -7,33 +8,76 @@ import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.devathon.contest2016.inject.Inject;
-import org.devathon.contest2016.inject.Singleton;
+import org.devathon.contest2016.inject.Parent;
 
-@Singleton
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.Set;
+
 public final class EventListener {
     @Inject private JavaPlugin plugin;
+    @Parent @Inject private Object creator;
+
+    private final Set<ListenerSub> listeners = new HashSet<>();
 
     @SuppressWarnings("unchecked")
     public <T extends Event> ListenerSub listenEvent(Class<T> eventType, EventPriority priority, boolean ignoreCancelled, ListenerCallback<T> callback) {
         Listener listener = new Listener() {};
 
+        ListenerSub sub = new ListenerSub() {
+            @Override
+            public void unsubscribe() {
+                unsubscribeNoRemove();
+                listeners.remove(this);
+            }
+
+            @Override
+            void unsubscribeNoRemove() {
+                HandlerList.unregisterAll(listener);
+            }
+        };
+
         Bukkit.getPluginManager().registerEvent(eventType, listener, priority, (l, event) -> {
             try {
                 callback.call((T) event);
             } catch (Exception e) {
+                plugin.getLogger().severe("Failed to dispatch event for " + (creator == null ? "???" : creator.getClass().getSimpleName()) + "'s EventListener...");
                 e.printStackTrace();
-                plugin.getLogger().severe("Failed to dispatch event to a listener...");
             }
         }, plugin, ignoreCancelled);
 
-        return () -> HandlerList.unregisterAll(listener);
+        registerListener(sub);
+        return sub;
+    }
+
+    public <T extends Event> ListenerSub listenEvent(Class<T> type, EventPriority priority, ListenerCallback<T> callback) {
+        return listenEvent(type, priority, false, callback);
+    }
+
+    public <T extends Event> ListenerSub listenEvent(Class<T> type, ListenerCallback<T> callback) {
+        return listenEvent(type, EventPriority.NORMAL, callback);
+    }
+
+    @Synchronized
+    private void registerListener(ListenerSub sub) {
+        listeners.add(sub);
+    }
+
+    @Synchronized
+    public void unregisterAll() {
+        Iterator<ListenerSub> iterator = listeners.iterator();
+        while (iterator.hasNext()) {
+            iterator.next().unsubscribeNoRemove();
+            iterator.remove();
+        }
     }
 
     public interface ListenerCallback<T> {
         void call(T event);
     }
 
-    public interface ListenerSub {
-        void unsubscribe();
+    public abstract class ListenerSub {
+        public abstract void unsubscribe();
+        abstract void unsubscribeNoRemove();
     }
 }
