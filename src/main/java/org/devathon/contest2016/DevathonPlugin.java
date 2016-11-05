@@ -1,12 +1,21 @@
 package org.devathon.contest2016;
 
+import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.devathon.contest2016.event.EventListener;
+import org.devathon.contest2016.inject.DependencyInjector;
+import org.devathon.contest2016.inject.Singleton;
 
-public class DevathonPlugin extends JavaPlugin {
-
+@Singleton
+public final class DevathonPlugin extends JavaPlugin {
+    @SuppressWarnings("PointlessBinding")
     @Override
     public void onEnable() {
-        // put your enable code here
+        new DependencyInjector()
+                .bind(JavaPlugin.class, this) //this is intentional I promise I understand it seems shitty
+                .bind(DevathonPlugin.class, this)
+                .bind(Plugin.class, this)
+                .bind(EventListener.class);
     }
 
     @Override
