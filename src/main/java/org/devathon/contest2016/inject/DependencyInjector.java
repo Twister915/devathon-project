@@ -14,18 +14,32 @@ public final class DependencyInjector {
     }
 
     public <T> T getInstance(Class<T> type) {
-        if (type.isAnnotationPresent(Singleton.class)) {
+        boolean isSingleton = type.isAnnotationPresent(Singleton.class);
+        if (isSingleton) {
             Object val = singletons.get(type);
             if (val != null)
                 return (T) val;
         }
 
-        Class<?> concreteType = providerTypes.getOrDefault(type, type);
+        T inst = doConstruction(type);
+        doFieldInjection(type, inst);
+
+        if (isSingleton)
+            singletons.put(type, inst);
+
+        return inst;
+    }
+
+    private <T> Class<? extends T> getConcreteType(Class<T> type) {
+        Class<? extends T> concreteType = (Class<? extends T>) providerTypes.getOrDefault(type, type);
         if (concreteType == null)
             throw new IllegalStateException("The type " + type.getSimpleName() + " could not be injected.");
-
         assert type.isAssignableFrom(concreteType);
+        return concreteType;
+    }
 
+    private <T> T doConstruction(Class<?> type) {
+        Class<?> concreteType = getConcreteType(type);
         Set<Exception> constructionAttempts = new HashSet<>();
         Constructor<?>[] constructors = concreteType.getDeclaredConstructors();
 
@@ -56,7 +70,12 @@ public final class DependencyInjector {
         if (inst == null)
             throw new IllegalStateException("There's no constructors?");
 
-        Iterator<Field> fieldIterator = allFields(type);
+        return inst;
+    }
+
+    private void doFieldInjection(Class<?> type, Object inst) {
+        Class<?> concreteType = inst.getClass();
+        Iterator<Field> fieldIterator = allFields(concreteType);
         while (fieldIterator.hasNext()) {
             Field next = fieldIterator.next();
             Class<?> declaringClass = next.getDeclaringClass(); //can't cache since we're walking up inheritance tree :(
@@ -72,11 +91,6 @@ public final class DependencyInjector {
                 throw new IllegalStateException("Could not inject at field " + next.getName() + " of " + concreteType.getSimpleName(), e);
             }
         }
-
-        if (type.isAnnotationPresent(Singleton.class))
-            singletons.put(type, inst);
-
-        return inst;
     }
 
     private static <T> Iterator<Field> allFields(Class<T> clazz) {
@@ -107,13 +121,19 @@ public final class DependencyInjector {
     }
 
     public DependencyInjector bind(Class<?> type, Class<?> provider) {
-        test(type, provider);
-        providerTypes.put(type, provider);
+        testType(type, provider);
+        Class<?> concreteType = getConcreteType(provider);
+        Singleton annotation = concreteType.getAnnotation(Singleton.class);
+        if (annotation != null && annotation.eager())
+            bind(type, getInstance(type));
+        else
+            providerTypes.put(type, provider);
         return this;
     }
 
     public DependencyInjector bind(Class<?> type, Object instance) {
-        test(type, instance.getClass());
+        testType(type, instance.getClass());
+        doFieldInjection(type, instance);
         singletons.put(type, instance);
         return this;
     }
@@ -128,7 +148,7 @@ public final class DependencyInjector {
         return this;
     }
 
-    private static void test(Class<?> type1, Class<?> type2) {
+    private static void testType(Class<?> type1, Class<?> type2) {
         if (!type1.isAssignableFrom(type2))
             throw new IllegalArgumentException("Cannot assign " + type1.getSimpleName() + " from " + type2.getSimpleName());
     }

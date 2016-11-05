@@ -8,4 +8,5 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.FIELD, ElementType.CONSTRUCTOR, ElementType.TYPE})
 public @interface Singleton {
+    boolean eager() default false;
 }
