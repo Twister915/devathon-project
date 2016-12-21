@@ -1,5 +1,6 @@
 package org.devathon.contest2016;
 
+import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.devathon.contest2016.event.EventListener;
@@ -14,11 +15,14 @@ public final class DevathonPlugin extends JavaPlugin {
     @SuppressWarnings("PointlessBinding")
     @Override
     public void onEnable() {
-        new DependencyInjector()
-                .bind(JavaPlugin.class, this) //this is intentional I promise I understand it seems shitty
-                .bind(DevathonPlugin.class, this)
+        DependencyInjector bind = new DependencyInjector()
                 .bind(Plugin.class, this)
-                .bind(EventListener.class);
+                .bind(JavaPlugin.class, this) //this is intentional I promise I understand it seems shitty
+                .bind(DevathonPlugin.class, this);
+
+        listener.listenEvent(PlayerJoinEvent.class, event -> {
+            event.setJoinMessage("fuck");
+        });
     }
 
     @Override

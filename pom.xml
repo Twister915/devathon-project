@@ -32,5 +32,11 @@
 			<artifactId>lombok</artifactId>
 			<version>1.16.2</version>
 		</dependency>
+		<dependency>
+			<groupId>javax.inject</groupId>
+			<artifactId>javax.inject</artifactId>
+			<version>1.0.0.redhat-6</version>
+		</dependency>
+
 	</dependencies>
 </project>

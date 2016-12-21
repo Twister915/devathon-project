@@ -148,8 +148,10 @@ public final class DependencyInjector {
 
     public DependencyInjector bind(Class<?> type, Object instance) {
         testType(type, instance.getClass());
+        boolean strappedPreviously = singletons.containsValue(instance);
         singletons.put(type, instance);
-        doFieldInjection(instance, null);
+        if (!strappedPreviously)
+            doFieldInjection(instance, null);
         return this;
     }
 
